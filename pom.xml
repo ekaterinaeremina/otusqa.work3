@@ -75,7 +75,7 @@
           <version>2.22.1</version>
           <configuration>
             <includes>
-              <include>OtusSiteTest.java</include>
+              <include>BaseTest.java</include>
             </includes>
             <systemPropertyVariables>
               <browser>CHROME</browser>

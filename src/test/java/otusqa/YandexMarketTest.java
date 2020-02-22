@@ -8,7 +8,8 @@ import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testng.Assert;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
+
 import java.util.List;
 
 public class YandexMarketTest extends BaseTest{
@@ -18,6 +19,7 @@ public class YandexMarketTest extends BaseTest{
 
     @Test
     public void CompareOSOfXiaomiAndRedmi() {
+
         WebDriverWait wait = new WebDriverWait(driver, 30);
         String ya = "https://yandex.ru";
         driver.get(ya);
@@ -59,23 +61,21 @@ public class YandexMarketTest extends BaseTest{
         findElementWithWaitVisibility(brand, wait,locXiaomi).click();
         log.info("Select Xiaomi brand");
 
+        By locProductsGrid = By.xpath("(//div[@class='n-filter-applied-results__content preloadable i-bem preloadable_js_inited'])");
+        wait.until(SortEnd(wait, locProductsGrid));
+        log.info("Sort by brand completed");
+
         By locSortByPrice = By.linkText("по цене");
         findElementWithWaitVisibility(wait, locSortByPrice).click();
         log.info("Sort by price");
 
-        // Переделать
-        //By locProductsGrid = By.xpath("(//div[@class='n-filter-applied-results__content preloadable i-bem preloadable_js_inited'])");
-        /*wait.until(SortEnd(wait, locProductsGrid));
-        log.info("Sort completed");*/
-
-        By locLoad = By.xpath("(//div[contains(@class, 'n-snippet-cell2 i-bem b-spy-events b-zone b-spy-visible shop-history')])");
-        wait.until(ExpectedConditions.visibilityOfElementLocated(locLoad));
+        wait.until(SortEnd(wait, locProductsGrid));
+        log.info("Sort by price completed");
 
         By locProducts = By.xpath("(//div[@class='n-filter-applied-results__content preloadable i-bem preloadable_js_inited']/div[1]/div)");
         List<WebElement> productsAtOnce = driver.findElements(locProducts);
         int nAll = productsAtOnce.size(); // количество смартфонов отображающееся за раз
         log.info("Show "+ nAll + " phones at once");
-
 
         WebElement firstXiaomi=null; // Первый в списке смартфон Xiaomi не Redmi
         WebElement firstRedmi=null; // Первый в списке смартфон Redmi
@@ -84,7 +84,7 @@ public class YandexMarketTest extends BaseTest{
         int nShowYet = 1; // итератор по блокам "Показать еще"
 
         // Поиск первого сматрфона не Redmi
-        while (!title.contains("Смартфон") || title.contains("Redmi")) {
+        while (!title.contains("Смартфон ") || title.toUpperCase().contains("Redmi".toUpperCase())) {
             // Если не найдено на первой странице, жмем "Показать еще"
             if (nPhone>nAll)
             {
@@ -97,7 +97,8 @@ public class YandexMarketTest extends BaseTest{
             firstXiaomi = findElementWithWaitVisibility(wait,locCurrentPhone);
             List<WebElement> tagsA = firstXiaomi.findElements(By.tagName("a"));
             for (WebElement el : tagsA) {
-                if (el.getAttribute("title").contains("Смартфон") )
+                String t = el.getAttribute("title").toUpperCase();
+                if (el.getAttribute("title").contains("Смартфон ") && t.contains("Xiaomi".toUpperCase()))
                     title = el.getAttribute("title");
             }
             nPhone++;
@@ -107,9 +108,10 @@ public class YandexMarketTest extends BaseTest{
         int NShowYetXiaomi = nShowYet;
         nPhone = 1;
         nShowYet = 1;
+        String titleXiaomi = title;
 
         // Поиск первого сматрфона Redmi
-        while (!title.contains("Смартфон") || !title.contains("Redmi")) {
+        while (!title.contains("Смартфон ") || !title.toUpperCase().contains("Redmi".toUpperCase())) {
             // Если не найдено на первой странице, жмем "Показать еще"
             if (nPhone>nAll)
             {
@@ -122,14 +124,17 @@ public class YandexMarketTest extends BaseTest{
             firstRedmi = findElementWithWaitVisibility(wait,locCurrentPhone);
             List<WebElement> tagsA = firstRedmi.findElements(By.tagName("a"));
             for (WebElement el : tagsA) {
-                if (el.getAttribute("title").contains("Смартфон") )
+                String t = el.getAttribute("title").toUpperCase();
+                if (el.getAttribute("title").contains("Смартфон ") && t.contains("Redmi".toUpperCase()))
                     title = el.getAttribute("title");
             }
             nPhone++;
         }
         int NRedmi = nPhone-1;
         int NShowYetRedmi = nShowYet;
+
         log.info("Fisrt Redmi: "+ title);
+        String titleRedmi = title;
 
         By locAddToCompareRedmi = By.xpath("(//div[@class='n-filter-applied-results__content preloadable i-bem preloadable_js_inited']/div["+NShowYetRedmi+"]/div["+NRedmi+"]/div[1]/div[1]/div[1]/div[1]/i[1])");
         addElementToCompare(firstRedmi, wait, locAddToCompareRedmi);
@@ -137,14 +142,24 @@ public class YandexMarketTest extends BaseTest{
 
         By locPopUpInformer = By.xpath("(//div[@class='popup-informer__content'])");
         By locPopUpInformerClose = By.xpath("(//div[@class='popup-informer__content']/div[4])");
-        findElementWithWaitVisibility(wait, locPopUpInformer,locPopUpInformerClose).click();
+
+        WebElement popup = findElementWithWaitVisibility(wait, locPopUpInformer,locPopUpInformerClose);
+        String popupTitle = getTextFromPopup(wait,popup);
+
+        Assert.assertEquals(popupTitle, "Товар "+titleRedmi+" добавлен к сравнению");
+        log.info("Show message Товар "+titleRedmi+" добавлен к сравнению");
+        popup.click();
         log.info("Close popup informer");
 
         By locAddToCompareXiaomi = By.xpath("(//div[@class='n-filter-applied-results__content preloadable i-bem preloadable_js_inited']/div["+NShowYetXiaomi+"]/div["+NXiaomi+"]/div[1]/div[1]/div[1]/div[1]/i[1])");
         addElementToCompare(firstXiaomi, wait, locAddToCompareXiaomi);
         log.info("Add xiaomi to compare");
 
-        findElementWithWaitVisibility(wait, locPopUpInformer,locPopUpInformerClose).click();
+        popup = findElementWithWaitVisibility(wait, locPopUpInformer,locPopUpInformerClose);
+        popupTitle = getTextFromPopup(wait,popup);
+        Assert.assertEquals(popupTitle, "Товар "+titleXiaomi+" добавлен к сравнению");
+        log.info("Show message Товар "+titleXiaomi+" добавлен к сравнению");
+        popup.click();
         log.info("Close popup informer");
 
         By locCompare = By.xpath("(//a[@href='/compare?track=head'])");
@@ -190,7 +205,14 @@ public class YandexMarketTest extends BaseTest{
         element.findElement(by).click();
     }
 
-private ExpectedCondition<Boolean> SortEnd(final WebDriverWait wait, final By by) {
+    private String getTextFromPopup(WebDriverWait wait, WebElement popup)
+    {
+        By loctitle = By.xpath("(//div[@class='popup-informer__title'])");
+        WebElement title = findElementWithWaitVisibility(wait, loctitle);
+        return title.getText();
+    }
+
+    private ExpectedCondition<Boolean> SortEnd(final WebDriverWait wait, final By by) {
         return new ExpectedCondition<Boolean>() {
             @Override
             public Boolean apply(final WebDriver driver) {
@@ -204,3 +226,5 @@ private ExpectedCondition<Boolean> SortEnd(final WebDriverWait wait, final By by
         };
     }
 }
+
+
